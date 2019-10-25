@@ -16,6 +16,7 @@
 (alias 'stc 'clojure.spec.test.check)
 
 (defn load-testable [sym]
+  (println "LOAD# " (type sym) sym (resolve sym))
   (let [var (resolve sym)]
     {:kaocha.testable/type :kaocha.type/spec.test.fdef
      :kaocha.testable/id   (keyword sym)

@@ -19,11 +19,10 @@
 (defn has-stc? [tests]
   (some is-stc? tests))
 
-(defn tests-with-overridden-stc-opts
-  [{:kaocha/keys [tests] ::stc/keys [opts] :as config}]
+(defn tests-with-merged-stc-opts [tests stc-opts]
   (map (fn [test]
          (if (is-stc? test)
-           (update test assoc ::stc/opts opts)
+           (update test ::stc/opts merge stc-opts)
            test))
        tests))
 
@@ -35,8 +34,8 @@
    :kaocha.spec.test.check/syms :all-fdefs
    ::stc/opts                   opts})
 
-(defn overide-stc-settings [config]
-  (assoc config :kaocha/tests (tests-with-overridden-stc-opts config)))
+(defn merge-stc-settings [{::stc/keys [opts] :as config}]
+  (update config :kaocha/tests tests-with-merged-stc-opts opts))
 
 (defn add-default-test-suite [config]
   (update config :kaocha/tests conj (default-test-suite config)))
@@ -56,7 +55,7 @@
           instrumentation (get-in config [:kaocha/cli-options :stc-instrumentation])
           spec-asserts    (get-in config [:kaocha/cli-options :stc-asserts])
           config          (if (has-stc? tests)
-                            (overide-stc-settings config)
+                            (merge-stc-settings config)
                             (add-default-test-suite config))]
       (assoc config
              ::stc/opts (->> {:num-tests num-tests

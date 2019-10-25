@@ -107,3 +107,81 @@ Feature: Automatic spec test check generation
         sample/bad-fn FAIL
         sample/ok-fn
       """"
+
+  Scenario: spec.test.check options passed via tests.edn (configured at top-level)
+    Given a file named "tests.edn" with:
+      """ clojure
+      #kaocha/v1
+      {:tests [{:type :kaocha.type/spec.test.check
+                :id   :generative-fdef-checks}]
+       :clojure.spec.test.check/opts {:num-tests 3}}]}
+      """
+    Given a file named "src/sample.clj" with:
+      """ clojure
+      (ns sample
+        (:require [orchestra.core :refer [defn-spec]]))
+
+      (defn-spec fn-1 nil? [] (println)(println "fn-1"))
+      (defn-spec fn-2 nil? [] )
+      """
+    When I run `bin/kaocha --reporter kaocha.report/documentation --no-randomize --no-color --no-capture-output`
+    Then the output should contain:
+      """ text
+      sample
+        sample/fn-1
+      fn-1
+
+      fn-1
+
+      fn-1
+
+        sample/fn-2
+      """"
+
+  Scenario: spec.test.check options passed via tests.edn (multiple tests)
+    Given a file named "tests.edn" with:
+      """ clojure
+      #kaocha/v1
+      {:tests [{:type :kaocha.type/spec.test.check
+                :id   :fn-1
+                :clojure.spec.test.check/opts {:num-tests 1}
+                           :kaocha.spec.test.check/syms  #{'sample/fn-1}
+                :kaocha.spec.test.check/checks [{}
+                          {:clojure.spec.test.check/opts {:num-tests 2}
+                           :kaocha.spec.test.check/syms  #{'sample/fn-2}}
+                          {:clojure.spec.test.check/opts {:num-tests 3}
+                           :kaocha.spec.test.check/syms  #{'sample/fn-3}}]
+                }]
+       }]}
+      """
+    Given a file named "src/sample.clj" with:
+      """ clojure
+      (ns sample
+        (:require [orchestra.core :refer [defn-spec]]))
+
+      (defn-spec fn-1 nil? [] (println)(println "fn-1"))
+      (defn-spec fn-2 nil? [] (println)(println "fn-2"))
+      (defn-spec fn-3 nil? [] (println)(println "fn-3"))
+      (defn-spec fn-4 nil? [] )
+      """
+    When I run `bin/kaocha --reporter kaocha.report/documentation --no-randomize --no-color --no-capture-output`
+    Then the output should contain:
+      """ text
+      sample
+        sample/fn-1
+      fn-1
+
+        sample/fn-2
+      fn-2
+
+      fn-2
+
+        sample/fn-3
+      fn-3
+
+      fn-3
+
+      fn-3
+
+      sample/fn-4
+      """"

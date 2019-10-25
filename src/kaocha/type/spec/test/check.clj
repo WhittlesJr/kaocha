@@ -16,22 +16,30 @@
 (alias 'stc 'clojure.spec.test.check)
 
 (def check-defaults {:kaocha.spec.test.check/ns-patterns [".*"]
-                     :kaocha.spec.test.check/syms :all-fdefs})
+                     :kaocha.spec.test.check/syms        :all-fdefs})
 
-(defn all-fdef-tests [{:kaocha/keys [source-paths]
-                       :kaocha.spec.test.check/keys [ns-patterns]
-                       :as          testable}]
-  (let [ns-patterns (map regex ns-patterns)
-        ns-names    (load/find-test-nss source-paths ns-patterns)
-        testables   (map #(type.spec.ns/->testable testable %) ns-names)]
-    (testable/load-testables testables)))
+(defn load-test-nss [{source-paths :kaocha/source-paths
+                      ns-patterns  :kaocha.spec.test.check/ns-patterns
+                      :as          check}]
+  (->> (map regex ns-patterns)
+       (load/find-test-nss source-paths)))
+
+(defn all-fdef-tests [check]
+  (->> (load-test-nss check)
+       (map #(type.spec.ns/->testable check %))
+       (testable/load-testables)))
+
+(defn given-fdef-tests [{syms :kaocha.spec.test.check/syms :as check}]
+  (load-test-nss check)
+  (type.fdef/load-testables syms))
 
 (defn check-tests [check]
   (let [{syms :kaocha.spec.test.check/syms :as check} (merge check-defaults check)]
+    (prn "CHECK" check)
     (condp = syms
       :all-fdefs   (all-fdef-tests check)
       :other-fdefs nil ;; TODO: this requires orchestration from the plugin
-      :else        (type.fdef/load-testables syms))))
+      (given-fdef-tests check))))
 
 (defn checks [{checks :kaocha.spec.test.check/checks :as testable}]
   (let [checks (or checks [{}])]
